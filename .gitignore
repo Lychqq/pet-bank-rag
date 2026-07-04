@@ -1,0 +1,18 @@
+# Переменные окружения — никогда не коммитить API ключи!
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Docker volumes
+postgres_data/
+
+# Документы — не коммитим чужие PDF
+docs/*.pdf
+
+# Ragas кэш
+.ragas/
