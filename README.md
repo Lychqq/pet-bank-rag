@@ -88,7 +88,7 @@ InMemoryChatMessageHistory исчезает при перезапуске сер
 
 ```bash
 # 1. Клонировать и перейти в папку
-git clone https://github.com/your-username/bank-rag
+git clone https://github.com/Lychqq/pet-bank-rag
 cd bank-rag
 
 # 2. Настроить переменные окружения
