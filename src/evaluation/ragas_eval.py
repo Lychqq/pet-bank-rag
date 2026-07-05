@@ -25,12 +25,14 @@ if 'langchain_community.chat_models.vertexai' not in sys.modules:
 sys.modules['langchain_community.chat_models.vertexai'].ChatVertexAI = type('ChatVertexAI', (object,), {})
 from datasets import Dataset
 from ragas import evaluate
+# pylint: disable=no-name-in-module
 from ragas.metrics import (
     context_precision,
     context_recall,
     faithfulness,
     answer_relevancy,
 )
+# pylint: enable=no-name-in-module
 from ragas.llms import LangchainLLMWrapper
 from ragas.embeddings import LangchainEmbeddingsWrapper
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings

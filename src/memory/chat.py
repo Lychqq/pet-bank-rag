@@ -36,7 +36,7 @@ def get_session_history(session_id: str) -> PostgresChatMessageHistory:
     - Один общий объект памяти = все клиенты видят чужие диалоги
     - Функция с session_id = каждый клиент изолирован в своей "комнате"
     """
-    return PostgresChatMessageHistory(
+    return PostgresChatMessageHistory(  # pylint: disable=unexpected-keyword-arg
         connection_string=DB_URL_PSYCOPG,
         session_id=session_id,
         table_name="chat_history",

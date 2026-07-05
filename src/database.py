@@ -1,6 +1,6 @@
 import os
 import psycopg2
-from src.config import DB_URL_PSYCOPG
+from src.config import DB_URL_PSYCOPG, DB_URL
 
 
 import time

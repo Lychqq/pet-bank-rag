@@ -22,9 +22,9 @@ DB_URL = f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_
 DB_URL_PSYCOPG = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # RAG
-CHUNK_SIZE      = int(os.getenv("CHUNK_SIZE", 500))
-CHUNK_OVERLAP   = int(os.getenv("CHUNK_OVERLAP", 50))
-TOP_K_RETRIEVAL = int(os.getenv("TOP_K_RETRIEVAL", 5))
+CHUNK_SIZE      = int(os.getenv("CHUNK_SIZE", "500"))
+CHUNK_OVERLAP   = int(os.getenv("CHUNK_OVERLAP", "50"))
+TOP_K_RETRIEVAL = int(os.getenv("TOP_K_RETRIEVAL", "5"))
 
 # System prompt — guardrails для банкового бота
 SYSTEM_PROMPT = """Ты ассистент банка для клиентской поддержки.
