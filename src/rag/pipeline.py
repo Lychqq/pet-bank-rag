@@ -1,4 +1,7 @@
 import json
+import math
+import re
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -13,8 +16,6 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from src.config import (
     GOOGLE_API_KEY,
     GEMINI_MODEL,
-    EMBEDDING_MODEL,
-    EMBEDDING_DIM,
     CHUNK_SIZE,
     CHUNK_OVERLAP,
     TOP_K_RETRIEVAL,
@@ -36,12 +37,12 @@ class LocalEmbeddings:
 
 _embeddings_instance = None
 def get_embeddings():
-    global _embeddings_instance
+    global _embeddings_instance  # pylint: disable=global-statement
     if _embeddings_instance is None:
         _embeddings_instance = LocalEmbeddings()
     return _embeddings_instance
 
-from langchain_google_genai import ChatGoogleGenerativeAI
+
 
 def get_llm(temperature: float = 0.0):
     return ChatGoogleGenerativeAI(
@@ -51,11 +52,6 @@ def get_llm(temperature: float = 0.0):
     )
 
 def index_documents(docs_folder: str = "docs") -> int:
-    import time
-    import re
-    import math
-    import psycopg2.extras
-    
     embeddings_model = get_embeddings()
     splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
 
@@ -71,7 +67,7 @@ def index_documents(docs_folder: str = "docs") -> int:
         try:
             loader = PyMuPDFLoader(str(pdf_path))
             chunks = splitter.split_documents(loader.load())
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             print(f"  [ERROR] Ошибка чтения PDF: {e}")
             continue
 
@@ -82,7 +78,7 @@ def index_documents(docs_folder: str = "docs") -> int:
         
         try:
             batch_embs = embeddings_model.model.encode(texts, batch_size=256, show_progress_bar=True)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             print(f"  [ERROR] Ошибка генерации эмбеддингов: {e}")
             continue
         
@@ -113,15 +109,15 @@ def index_documents(docs_folder: str = "docs") -> int:
                         cur.close()
                         inserted_for_pdf += len(batch)
                         break
-                    except Exception as e:
+                    except Exception as e:  # pylint: disable=broad-exception-caught
                         print(f"Ошибка вставки, попытка {attempt+1}: {e}")
                         time.sleep(1)
                         if not global_conn.closed:
                             try: global_conn.close()
-                            except: pass
+                            except Exception: pass  # pylint: disable=broad-exception-caught
                         if attempt < 4:
                             try: global_conn = get_connection()
-                            except: pass
+                            except Exception: pass  # pylint: disable=broad-exception-caught
                             
         total_chunks += inserted_for_pdf
         print(f"  OK {pdf_path.name}: {inserted_for_pdf} chunks")
@@ -216,7 +212,7 @@ def rag_query(query: str, session_id: Optional[str] = None, conn = None) -> dict
             (session_id, query, query, rewritten, grade, json.dumps([{"content": d["content"][:200], "source": d["metadata"].get("source")} for d in relevant_docs]), answer)
         )
         cur.close()
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"\n[Внимание] Не удалось сохранить лог в БД (соединение разорвано): {e}")
 
     if close_conn: conn.close()

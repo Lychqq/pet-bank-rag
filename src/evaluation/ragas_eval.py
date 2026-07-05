@@ -34,12 +34,10 @@ from ragas.metrics import (
 )
 # pylint: enable=no-name-in-module
 from ragas.llms import LangchainLLMWrapper
-from ragas.embeddings import LangchainEmbeddingsWrapper
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
-
-from src.config import GOOGLE_API_KEY, GEMINI_MODEL, EMBEDDING_MODEL
-from src.rag.pipeline import rag_query
 from langchain_google_genai import ChatGoogleGenerativeAI
+
+from src.config import GOOGLE_API_KEY, GEMINI_MODEL
+from src.rag.pipeline import rag_query
 
 def get_ragas_llm():
     """LLM для судьи Ragas (возвращаем Google Gemini, так как Groq не тянет лимиты)."""
@@ -57,6 +55,7 @@ from src.rag.pipeline import get_embeddings
 
 class CustomRagasEmbeddings(BaseRagasEmbeddings):
     def __init__(self):
+        super().__init__()
         self.model = get_embeddings()
     def embed_query(self, text: str) -> list[float]:
         return self.model.embed_query(text)

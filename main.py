@@ -69,11 +69,7 @@ def cmd_chat():
         # RAG retrieval
         rag_result = rag_query(query=user_input, session_id=session_id)
 
-        # Формируем контекст для передачи в чат с памятью
-        if rag_result["sources"]:
-            context_str = f"Найдено в документах ({', '.join(set(rag_result['sources']))})"
-        else:
-            context_str = ""
+
 
         # Генерация ответа с памятью диалога
         if rag_result["num_docs_relevant"] > 0:
@@ -86,7 +82,7 @@ def cmd_chat():
 
         # Показываем метаданные если был Corrective RAG
         if rag_result.get("rewritten_query"):
-            print(f"\n[Corrective RAG: запрос переписан для улучшения поиска]")
+            print("\n[Corrective RAG: запрос переписан для улучшения поиска]")
 
         print()
 
