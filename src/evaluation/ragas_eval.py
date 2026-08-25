@@ -115,29 +115,35 @@ def run_evaluation() -> dict:
     print("Запуск оценки RAG пайплайна...")
     print(f"Тестовых вопросов: {len(GOLDEN_DATASET)}\n")
 
-    for i, item in enumerate(GOLDEN_DATASET):
-        print(f"[{i+1}/{len(GOLDEN_DATASET)}] {item['question'][:60]}...")
+    from src.database import get_connection
+    conn = get_connection()
+    try:
+        for i, item in enumerate(GOLDEN_DATASET):
+            print(f"[{i+1}/{len(GOLDEN_DATASET)}] {item['question'][:60]}...")
 
-        result = rag_query(
-            query=item["question"],
-            session_id=f"ragas_eval_{i}",
-            conn=None,
-        )
+            result = rag_query(
+                query=item["question"],
+                session_id=f"ragas_eval_{i}",
+                conn=conn,
+            )
 
-        questions.append(item["question"])
-        answers.append(result["answer"])
-        contexts.append([
-            f"[{src}]" for src in result["sources"]
-        ] if result["sources"] else ["Контекст не найден"])
-        ground_truths.append(item["ground_truth"])
-        grades.append(result["grade"])
-        rewritten_queries.append(result.get("rewritten_query"))
+            questions.append(item["question"])
+            answers.append(result["answer"])
+            contexts.append([
+                f"[{src}]" for src in result["sources"]
+            ] if result["sources"] else ["Контекст не найден"])
+            ground_truths.append(item["ground_truth"])
+            grades.append(result["grade"])
+            rewritten_queries.append(result.get("rewritten_query"))
 
-        print(f"  Grade: {result['grade']} | "
-              f"Docs retrieved: {result['num_docs_retrieved']} | "
-              f"Relevant: {result['num_docs_relevant']}")
-        if result.get("rewritten_query"):
-            print(f"  Запрос переписан: {result['rewritten_query'][:60]}...")
+            print(f"  Grade: {result['grade']} | "
+                  f"Docs retrieved: {result['num_docs_retrieved']} | "
+                  f"Relevant: {result['num_docs_relevant']}")
+            if result.get("rewritten_query"):
+                print(f"  Запрос переписан: {result['rewritten_query'][:60]}...")
+    finally:
+        if not conn.closed:
+            conn.close()
 
     from ragas.run_config import RunConfig
     run_config = RunConfig(max_workers=1, max_wait=60, max_retries=10)

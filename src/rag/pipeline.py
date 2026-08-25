@@ -1,10 +1,12 @@
 import json
+import logging
 import math
 import re
 import time
 from pathlib import Path
 from typing import Optional
 
+import numpy as np
 import psycopg2
 import psycopg2.extras
 from langchain_community.document_loaders import PyMuPDFLoader
@@ -12,6 +14,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from sentence_transformers import SentenceTransformer
 from langchain_core.messages import HumanMessage, SystemMessage
+
+logger = logging.getLogger(__name__)
 
 from src.config import (
     GOOGLE_API_KEY,
@@ -63,12 +67,12 @@ def index_documents(docs_folder: str = "docs") -> int:
     global_conn = get_connection()
     
     for pdf_path in pdf_files:
-        print(f"Индексирую: {pdf_path.name}")
+        logger.info("Индексирую: %s", pdf_path.name)
         try:
             loader = PyMuPDFLoader(str(pdf_path))
             chunks = splitter.split_documents(loader.load())
         except Exception as e:  # pylint: disable=broad-exception-caught
-            print(f"  [ERROR] Ошибка чтения PDF: {e}")
+            logger.error("Ошибка чтения PDF %s: %s", pdf_path.name, e)
             continue
 
         if not chunks:
@@ -79,12 +83,12 @@ def index_documents(docs_folder: str = "docs") -> int:
         try:
             batch_embs = embeddings_model.model.encode(texts, batch_size=256, show_progress_bar=True)
         except Exception as e:  # pylint: disable=broad-exception-caught
-            print(f"  [ERROR] Ошибка генерации эмбеддингов: {e}")
+            logger.error("Ошибка генерации эмбеддингов для %s: %s", pdf_path.name, e)
             continue
         
         params = []
         for chunk, emb in zip(chunks, batch_embs):
-            if any(math.isnan(x) for x in emb):
+            if np.isnan(emb).any():
                 continue
             clean_text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', chunk.page_content)
             params.append((
@@ -110,7 +114,7 @@ def index_documents(docs_folder: str = "docs") -> int:
                         inserted_for_pdf += len(batch)
                         break
                     except Exception as e:  # pylint: disable=broad-exception-caught
-                        print(f"Ошибка вставки, попытка {attempt+1}: {e}")
+                        logger.warning("Ошибка вставки, попытка %d: %s", attempt + 1, e)
                         time.sleep(1)
                         if not global_conn.closed:
                             try: global_conn.close()
@@ -120,7 +124,7 @@ def index_documents(docs_folder: str = "docs") -> int:
                             except Exception: pass  # pylint: disable=broad-exception-caught
                             
         total_chunks += inserted_for_pdf
-        print(f"  OK {pdf_path.name}: {inserted_for_pdf} chunks")
+        logger.info("OK %s: %d chunks", pdf_path.name, inserted_for_pdf)
 
     if not global_conn.closed: global_conn.close()
     return total_chunks
@@ -213,7 +217,7 @@ def rag_query(query: str, session_id: Optional[str] = None, conn = None) -> dict
         )
         cur.close()
     except Exception as e:  # pylint: disable=broad-exception-caught
-        print(f"\n[Внимание] Не удалось сохранить лог в БД (соединение разорвано): {e}")
+        logger.warning("Не удалось сохранить лог в БД (соединение разорвано): %s", e)
 
     if close_conn: conn.close()
     return {"answer": answer, "grade": grade, "rewritten_query": rewritten, "sources": [d["metadata"].get("source") for d in relevant_docs], "num_docs_retrieved": len(docs), "num_docs_relevant": len(relevant_docs)}

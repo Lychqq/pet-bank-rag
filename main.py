@@ -35,6 +35,8 @@ def cmd_chat():
     """Интерактивный диалог с банковским ботом."""
     from src.rag.pipeline import rag_query
     from src.memory.chat import chat_with_memory, get_history
+    from src.database import get_connection
+
     session_id = str(uuid.uuid4())
     print("\n" + "="*60)
     print("БАНКОВСКИЙ АССИСТЕНТ")
@@ -43,48 +45,51 @@ def cmd_chat():
     print("Введите 'exit' для выхода, 'history' для просмотра истории")
     print("="*60 + "\n")
 
-    while True:
-        try:
-            user_input = input("Вы: ").strip()
-        except (KeyboardInterrupt, EOFError):
-            print("\nДо свидания!")
-            break
+    conn = get_connection()
+    try:
+        while True:
+            try:
+                user_input = input("Вы: ").strip()
+            except (KeyboardInterrupt, EOFError):
+                print("\nДо свидания!")
+                break
 
-        if not user_input:
-            continue
+            if not user_input:
+                continue
 
-        if user_input.lower() == "exit":
-            print("До свидания!")
-            break
+            if user_input.lower() == "exit":
+                print("До свидания!")
+                break
 
-        if user_input.lower() == "history":
-            history = get_history(session_id)
-            print(f"\nИстория диалога ({len(history)} сообщений):")
-            for msg in history:
-                role = "Вы" if msg["role"] == "user" else "Бот"
-                print(f"  {role}: {msg['content'][:100]}...")
+            if user_input.lower() == "history":
+                history = get_history(session_id)
+                print(f"\nИстория диалога ({len(history)} сообщений):")
+                for msg in history:
+                    role = "Вы" if msg["role"] == "user" else "Бот"
+                    print(f"  {role}: {msg['content'][:100]}...")
+                print()
+                continue
+
+            # RAG retrieval с переиспользованием коннекта
+            rag_result = rag_query(query=user_input, session_id=session_id, conn=conn)
+
+            # Генерация ответа с памятью диалога
+            if rag_result["num_docs_relevant"] > 0:
+                answer = rag_result["answer"]
+            else:
+                # Если RAG не нашёл ничего — отвечаем через память без RAG контекста
+                answer = chat_with_memory(user_input, session_id)
+
+            print(f"\nБот: {answer}")
+
+            # Показываем метаданные если был Corrective RAG
+            if rag_result.get("rewritten_query"):
+                print("\n[Corrective RAG: запрос переписан для улучшения поиска]")
+
             print()
-            continue
-
-        # RAG retrieval
-        rag_result = rag_query(query=user_input, session_id=session_id)
-
-
-
-        # Генерация ответа с памятью диалога
-        if rag_result["num_docs_relevant"] > 0:
-            answer = rag_result["answer"]
-        else:
-            # Если RAG не нашёл ничего — отвечаем через память без RAG контекста
-            answer = chat_with_memory(user_input, session_id)
-
-        print(f"\nБот: {answer}")
-
-        # Показываем метаданные если был Corrective RAG
-        if rag_result.get("rewritten_query"):
-            print("\n[Corrective RAG: запрос переписан для улучшения поиска]")
-
-        print()
+    finally:
+        if not conn.closed:
+            conn.close()
 
 
 def cmd_ocr(file_path: str):
@@ -130,6 +135,8 @@ def cmd_demo():
     """Полная демонстрация всех компонентов системы."""
     from src.rag.pipeline import rag_query
     from src.memory.chat import chat_with_memory
+    from src.database import get_connection
+
     print("\n" + "="*60)
     print("ДЕМОНСТРАЦИЯ БАНКОВСКОГО RAG-АССИСТЕНТА")
     print("="*60)
@@ -144,16 +151,21 @@ def cmd_demo():
         "Какой максимальный кредитный лимит по золотой карте?",  # нет в документах
     ]
 
-    for q in test_questions:
-        print(f"Вопрос: {q}")
-        result = rag_query(query=q, session_id=session_id)
-        print(f"Ответ: {result['answer'][:200]}...")
-        print(f"  Grade: {result['grade']} | "
-              f"Docs: {result['num_docs_retrieved']} найдено, "
-              f"{result['num_docs_relevant']} релевантных")
-        if result.get("rewritten_query"):
-            print(f"  [Corrective RAG активирован] Переписан: {result['rewritten_query']}")
-        print()
+    conn = get_connection()
+    try:
+        for q in test_questions:
+            print(f"Вопрос: {q}")
+            result = rag_query(query=q, session_id=session_id, conn=conn)
+            print(f"Ответ: {result['answer'][:200]}...")
+            print(f"  Grade: {result['grade']} | "
+                  f"Docs: {result['num_docs_retrieved']} найдено, "
+                  f"{result['num_docs_relevant']} релевантных")
+            if result.get("rewritten_query"):
+                print(f"  [Corrective RAG активирован] Переписан: {result['rewritten_query']}")
+            print()
+    finally:
+        if not conn.closed:
+            conn.close()
 
     # 2. Показываем память диалога
     print("\n--- 2. ПАМЯТЬ ДИАЛОГА ---\n")

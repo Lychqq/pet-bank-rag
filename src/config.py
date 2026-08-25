@@ -15,11 +15,15 @@ EMBEDDING_DIM = 768  # для MiniLM-L12-v2
 DB_HOST     = os.getenv("POSTGRES_HOST", "localhost")
 DB_PORT     = os.getenv("POSTGRES_PORT", "5432")
 DB_USER     = os.getenv("POSTGRES_USER", "postgres")
-DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "")
+DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 DB_NAME     = os.getenv("POSTGRES_DB", "postgres")
 
-DB_URL = f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-DB_URL_PSYCOPG = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+if DB_PASSWORD:
+    DB_URL = f"postgresql+psycopg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    DB_URL_PSYCOPG = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+else:
+    DB_URL = f"postgresql+psycopg://{DB_USER}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    DB_URL_PSYCOPG = f"postgresql://{DB_USER}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # RAG
 CHUNK_SIZE      = int(os.getenv("CHUNK_SIZE", "500"))

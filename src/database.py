@@ -1,10 +1,13 @@
+import logging
 import time
 import psycopg2
 from src.config import DB_URL_PSYCOPG, DB_URL
 
+logger = logging.getLogger(__name__)
+
 def get_connection():
     """Возвращает соединение к БД с защитой от обрывов Supabase."""
-    for _ in range(5):
+    for attempt in range(5):
         try:
             conn = psycopg2.connect(
                 DB_URL_PSYCOPG,
@@ -15,10 +18,10 @@ def get_connection():
             )
             conn.autocommit = True
             return conn
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            print(f"  [БД] Ошибка подключения: {e}. Повтор через 2 сек...")
+        except psycopg2.Error as e:
+            logger.warning("[БД] Ошибка подключения: %s. Попытка %d/5, повтор через 2 сек...", e, attempt + 1)
             time.sleep(2)
-    raise Exception("Не удалось подключиться к базе данных после 5 попыток.")  # pylint: disable=broad-exception-raised
+    raise ConnectionError("Не удалось подключиться к базе данных после 5 попыток.")
 
 
 def get_sync_connection_string() -> str:
